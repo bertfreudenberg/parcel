@@ -2,27 +2,18 @@
 
 import type {IDisposable, LogEvent} from '@parcel/types';
 
-import EventEmitter from 'events';
+import ValueEmitter from '@parcel/value-emitter';
 import {inspect} from 'util';
 
 class Logger {
-  // TODO: This can't be explicitly annotated as an EventEmitter since
-  // declared private properties with type annotations break eslint's
-  // no-unused-var rule (even with babel-eslint). Annotate this when
-  // things aren't broken: https://github.com/babel/babel-eslint/issues/688
-  #emitter = new EventEmitter();
+  _logEmitter: ValueEmitter<LogEvent> = new ValueEmitter();
 
   onLog(cb: (event: LogEvent) => mixed): IDisposable {
-    this.#emitter.addListener('log', cb);
-    return {
-      dispose: () => {
-        this.#emitter.removeListener('log', cb);
-      }
-    };
+    return this._logEmitter.addListener(cb);
   }
 
   verbose(message: string): void {
-    this.#emitter.emit('log', {
+    this._logEmitter.emit({
       type: 'log',
       level: 'verbose',
       message
@@ -34,15 +25,15 @@ class Logger {
   }
 
   log(message: string): void {
-    this.#emitter.emit('log', {
+    this._logEmitter.emit({
       type: 'log',
       level: 'info',
       message
     });
   }
 
-  warn(err: Error | string): void {
-    this.#emitter.emit('log', {
+  warn(err: string): void {
+    this._logEmitter.emit({
       type: 'log',
       level: 'warn',
       message: err
@@ -50,7 +41,7 @@ class Logger {
   }
 
   error(err: Error | string): void {
-    this.#emitter.emit('log', {
+    this._logEmitter.emit({
       type: 'log',
       level: 'error',
       message: err
@@ -58,7 +49,7 @@ class Logger {
   }
 
   progress(message: string): void {
-    this.#emitter.emit('log', {
+    this._logEmitter.emit({
       type: 'log',
       level: 'progress',
       message
