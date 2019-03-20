@@ -1,4 +1,4 @@
-// @flow strict-local
+// @flow strict
 
 export interface IDisposable {
   dispose(): void;
@@ -13,18 +13,47 @@ export default class ValueEmitter<TValue> implements IDisposable {
   // but splicing a JS array gets pretty close, and copying the array (as is done
   // in emit) is far faster than a Set copy: https://github.com/atom/event-kit/pull/39
   _listeners: Array<(value: TValue) => mixed> = [];
+  _disposed: boolean = false;
 
   addListener(listener: (value: TValue) => mixed): IDisposable {
+    if (this._disposed) {
+      throw new AlreadyDisposedError(
+        'Cannot add a listener since this ValueEmitter has been disposed'
+      );
+    }
+
     this._listeners.push(listener);
 
+    // Close over a reference to this emitter in the disposable below, rather
+    // than referencing `this` directly. This allows us to set it to null after
+    // slicing out the listener.
+    // This prevents anyone holding onto the disposable after disposal from
+    // unintentionally retaining a reference to this emitter.
+    let emitter = this;
     return {
-      dispose: () => {
-        this._listeners.splice(this._listeners.indexOf(listener), 1);
+      dispose() {
+        if (emitter == null) {
+          return;
+        }
+
+        if (emitter._disposed) {
+          emitter = null;
+          return;
+        }
+
+        emitter._listeners.splice(emitter._listeners.indexOf(listener), 1);
+        emitter = null;
       }
     };
   }
 
   emit(value: TValue): void {
+    if (this._disposed) {
+      throw new AlreadyDisposedError(
+        'Cannot emit since this ValueEmitter has been disposed'
+      );
+    }
+
     // Iterate over a copy of listeners. This prevents the following cases:
     // * When a listener callback can itself register a new listener and be
     //   emitted as part of this iteration.
@@ -37,6 +66,16 @@ export default class ValueEmitter<TValue> implements IDisposable {
   }
 
   dispose() {
+    if (this._disposed) {
+      return;
+    }
+
     this._listeners = [];
+    this._disposed = true;
   }
 }
+
+export class AlreadyDisposedError extends Error {}
+Object.defineProperty(AlreadyDisposedError.prototype, 'name', {
+  value: 'AlreadyDisposedError'
+});
