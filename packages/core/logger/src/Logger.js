@@ -2,7 +2,7 @@
 
 import type {IDisposable, LogEvent} from '@parcel/types';
 
-import ValueEmitter from '@parcel/value-emitter';
+import {ValueEmitter} from '@parcel/events';
 import {inspect} from 'util';
 
 class Logger {
