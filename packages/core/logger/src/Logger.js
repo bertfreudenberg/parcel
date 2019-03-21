@@ -32,7 +32,7 @@ class Logger {
     });
   }
 
-  warn(err: string): void {
+  warn(err: Error | string): void {
     this._logEmitter.emit({
       type: 'log',
       level: 'warn',
