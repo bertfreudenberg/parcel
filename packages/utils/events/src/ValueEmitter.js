@@ -41,7 +41,11 @@ export default class ValueEmitter<TValue> implements IDisposable {
           return;
         }
 
-        emitter._listeners.splice(emitter._listeners.indexOf(listener), 1);
+        let listenerIndex = emitter._listeners.indexOf(listener);
+        if (listenerIndex > -1) {
+          emitter._listeners.splice(listenerIndex, 1);
+        }
+
         emitter = null;
       }
     };
